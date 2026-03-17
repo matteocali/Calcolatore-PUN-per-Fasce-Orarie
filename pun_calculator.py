@@ -121,6 +121,49 @@ def get_fascia(datetime_val, it_holidays):
         return "F2"
 
 
+def load_weights(script_dir):
+    """
+    Carica i pesi dal file 'pesi.txt' o 'pesi' nella stessa directory dello script.
+    Restituisce un dizionario {F1: val, F2: val, F3: val} normalizzato (somma 1) o None.
+    """
+    weights_files = ["pesi.txt", "pesi"]
+    found_file = None
+
+    for f in weights_files:
+        path = os.path.join(script_dir, f)
+        if os.path.exists(path):
+            found_file = path
+            break
+
+    if not found_file:
+        return None
+
+    print(f"\nTrovato file pesi: {found_file}")
+    weights = {}
+    try:
+        with open(found_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                if ':' in line:
+                    key, val = line.split(':', 1)
+                    key = key.strip().upper()
+                    # Gestione decimali con virgola o punto
+                    val = val.strip().replace(',', '.')
+                    weights[key] = float(val) / 100.0
+    except Exception as e:
+        print(f"Errore nella lettura del file pesi: {e}")
+        return None
+
+    # Verifica presenza chiavi necessarie
+    if all(k in weights for k in ["F1", "F2", "F3"]):
+        return weights
+    else:
+        print("File pesi incompleto (mancano F1, F2 o F3).")
+        return None
+
+
 def main():
     parser = argparse.ArgumentParser(description="Calcolatore Medio PUN per Fasce")
     parser.add_argument(
@@ -201,6 +244,19 @@ def main():
         # Aggiungo colonna media complessiva
         result_df["Media"] = monthly_avg
 
+    # Calcolo Media Pesata se pesi presenti
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    weights = load_weights(script_dir)
+
+    if weights and result_df is not None:
+        print("Aggiunta colonna 'Media Pesata'...")
+        # Recupera serie o NaN se colonna mancante
+        s_f1 = result_df["F1"] if "F1" in result_df.columns else pd.Series(float('nan'), index=result_df.index)
+        s_f2 = result_df["F2"] if "F2" in result_df.columns else pd.Series(float('nan'), index=result_df.index)
+        s_f3 = result_df["F3"] if "F3" in result_df.columns else pd.Series(float('nan'), index=result_df.index)
+
+        result_df["Media Pesata"] = (s_f1 * weights["F1"]) + (s_f2 * weights["F2"]) + (s_f3 * weights["F3"])
+
     # 3. Esportazione Tabella Excel
     base_filename = f"pun_{aggregation_name.lower()}_{date_range_str}"
     excel_filename = f"tabella_{base_filename}.xlsx"
@@ -262,6 +318,21 @@ def main():
                     linewidth=1.5,
                 )
 
+        # Plot Media Pesata
+        if "Media Pesata" in result_df.columns:
+            series = result_df["Media Pesata"].dropna()
+            if not series.empty:
+                plt.plot(
+                    series.index,
+                    series.values,
+                    marker="^",
+                    linestyle="-.",
+                    label="Media Pesata",
+                    color="purple",
+                    alpha=0.8,
+                    linewidth=1.5,
+                )
+
         # Formattazione asse X
         ax = plt.gca()
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%d/%m/%Y"))
@@ -299,6 +370,21 @@ def main():
                     label="Media",
                     color="gray",
                     alpha=0.7,
+                    linewidth=1.5,
+                )
+
+        # Plot Media Pesata (Mensile)
+        if "Media Pesata" in result_df.columns:
+            valid_mask = result_df["Media Pesata"].notna()
+            if valid_mask.any():
+                plt.plot(
+                    x_values[valid_mask],
+                    result_df.loc[valid_mask, "Media Pesata"],
+                    marker="^",
+                    linestyle="-.",
+                    label="Media Pesata",
+                    color="purple",
+                    alpha=0.8,
                     linewidth=1.5,
                 )
 

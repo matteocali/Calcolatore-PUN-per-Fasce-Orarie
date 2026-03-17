@@ -87,3 +87,21 @@ Il calcolo segue lo standard ARERA per le tariffe biorarie/multiorarie:
 | **F3 (Fuori Punta)** | Ore di minor carico | **23:00 - 7:00** <br> **Tutto il giorno** | Lunedì - Sabato <br> Domenica e Festivi Nazionali |
 
 *Nota: Le festività nazionali vengono rilevate automaticamente anno per anno grazie alla libreria `holidays`.*
+
+## ⚖️ Calcolo Media Pesata (Opzionale)
+
+È possibile calcolare una **Media Pesata** personalizzata basata sui consumi per fascia.
+Per attivare questa funzione:
+
+1. Creare un file di testo nominato `pesi.txt` (o semplicemente `pesi`) nella stessa cartella dello script.
+2. Inserire le percentuali di consumo per ogni fascia nel seguente formato:
+
+    ```text
+    F1: 45,1
+    F2: 35,8
+    F3: 19,1
+    ```
+
+    *Nota: I decimali possono essere indicati con punto o virgola.*
+
+Se il file è presente, lo script calcolerà automaticamente una colonna aggiuntiva **Media Pesata** nel file Excel e aggiungerà una linea dedicata nel grafico.
